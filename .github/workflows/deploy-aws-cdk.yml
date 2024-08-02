@@ -6,7 +6,7 @@ on:
   # TODO remove
   push:
     branches:
-      - bss-214-github-action-deploy
+      - dev-environment-deploy
 
 permissions:
   id-token: write
@@ -14,6 +14,8 @@ permissions:
 
 jobs:
   cdk-deploy:
+    # This means the workflow can only run from dev protected branches e.g. main
+    environment: dev
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main code
