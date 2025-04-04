@@ -70,6 +70,6 @@ if test -f /usr/libexec/PlistBuddy; then
 fi
 
 # update project file for local build
-sed -e "s/${APP_NAME_PLACEHOLDER}/${VITE_APP_NAME}/g" ./ios/App/App.xcodeproj/project.pbxproj.dist |\
+sed -e "s/${APP_ID_PLACEHOLDER}/${VITE_APP_ID}/g" ./ios/App/App.xcodeproj/project.pbxproj.dist |\
   sed -e "s/APP_STORE_CONNECT_TEAM_ID/${APP_STORE_CONNECT_TEAM_ID}/g" > ./ios/App/App.xcodeproj/project.pbxproj
 
