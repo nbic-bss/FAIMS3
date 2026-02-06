@@ -182,7 +182,8 @@ export class FaimsFrontEnd extends Construct {
       platform: 'web',
       serverprefix: 'fieldmark',
       VITE_CLUSTER_ADMIN_GROUP_NAME: 'cluster-admin',
-      VITE_COMMIT_VERSION: 'unknown TBD',
+      // It's optional to provide this
+      // VITE_COMMIT_VERSION: 'unknown TBD',
 
       // Debugging has performance implications
       VITE_DEBUG_APP: this.debugMode ? 'true' : 'false',
@@ -368,6 +369,8 @@ export class FaimsFrontEnd extends Construct {
         : {}),
       VITE_MAXIMUM_LONG_LIVED_DURATION_DAYS:
         props.maximumLongLivedDurationDays?.toString() ?? 'infinite',
+      // Monitoring
+      ...(props.bugsnagKey ? {VITE_BUGSNAG_API_KEY: props.bugsnagKey} : {}),
     };
 
     // Setup a deployment into this bucket with static files

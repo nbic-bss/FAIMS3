@@ -190,3 +190,37 @@ export function getMapConfig(): MapConfig {
     satelliteSource: get_satellite_source(),
   };
 }
+
+/**
+ * Gets the Bugsnag API key from environment variables.
+ * @returns The Bugsnag API key, or undefined if not configured.
+ */
+function getBugsnagApiKey(): string | undefined {
+  const apiKey = import.meta.env.VITE_BUGSNAG_API_KEY as string | undefined;
+  if (apiKey === '' || apiKey === undefined) {
+    console.log('VITE_BUGSNAG_API_KEY not set, error reporting disabled');
+    return undefined;
+  }
+  return apiKey;
+}
+
+export const BUGSNAG_API_KEY = getBugsnagApiKey();
+
+/**
+ * Gets the app version from Vite's __APP_VERSION__ replacement or environment variables.
+ * Falls back to 'unknown' if not configured.
+ * @returns The app version.
+ */
+function getVersion(): string {
+  // First try the Vite define replacement (set at build time)
+  const version = __APP_VERSION__;
+  if (version) {
+    console.info(`Using APP_VERSION from build: ${__APP_VERSION__}`);
+    return version;
+  }
+
+  console.warn('__APP_VERSION__ not set in build. Using "unknown"');
+  return 'unknown';
+}
+
+export const APP_VERSION = getVersion();

@@ -31,6 +31,11 @@ import {
 } from './services/emailService';
 import {getKeyService, IKeyService, KeySource} from './services/keyService';
 
+// Get the package version directly from package.json
+import {version as packageVersion} from '../package.json';
+console.log(`Using API version from package.json: ${packageVersion}`);
+export const API_VERSION = packageVersion;
+
 const TRUTHY_STRINGS = ['true', '1', 'on', 'yes'];
 
 // If a URL for the conductor instance is not provided this will be used as a fall-through
@@ -680,3 +685,19 @@ function maximumLongLivedDurationDays(): number | undefined {
 }
 
 export const MAXIMUM_LONG_LIVED_DURATION_DAYS = maximumLongLivedDurationDays();
+
+/**
+ * Gets the Bugsnag API key from environment variables.
+ * @returns The Bugsnag API key, or undefined if not configured.
+ */
+function bugsnagApiKey(): string | undefined {
+  const apiKey = process.env.BUGSNAG_API_KEY;
+  if (apiKey === '' || apiKey === undefined) {
+    console.log('BUGSNAG_API_KEY not set, error reporting disabled');
+    return undefined;
+  }
+  return apiKey;
+}
+
+export const BUGSNAG_API_KEY = bugsnagApiKey();
+
