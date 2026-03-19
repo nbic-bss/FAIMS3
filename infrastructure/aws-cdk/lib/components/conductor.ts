@@ -101,6 +101,8 @@ export interface FaimsConductorProps {
   smtpConfig: SMTPGeneralConfig;
   /** Social providers info (if enabled) */
   authProviders?: AuthProvidersConfig;
+  /** Provision SSO users policy - do we create a new user for an unknown SSO sign-in? Default 'reject' */
+  provisionSSOUsersPolicy?: 'own-team' | 'general-user' | 'reject';
   /** If true, adds typical localhost addresses to the allowable redirect
    * whitelist (DEV ONLY) */
   localhostWhitelist: boolean;
@@ -258,12 +260,21 @@ export class FaimsConductor extends Construct {
         KEY_SOURCE: 'AWS_SM',
         AWS_SECRET_KEY_ARN: props.privateKeySecretArn,
         NEW_CONDUCTOR_URL: props.webUrl,
+        PROVISION_SSO_USERS_POLICY: props.config.provisionSSOUsersPolicy,
 
         // Bugsnag (optional)
         ...(props.bugsnagApiKey ? {BUGSNAG_API_KEY: props.bugsnagApiKey} : {}),
 
         // add any auth environment variables
         ...authEnvironment,
+
+        // disable local login if specified in config (for SSO only deployments)
+        // defaults to false if not provided in config
+        DISABLE_LOCAL_LOGIN: props.authProviders
+          ? props.authProviders.disableLocalLogin
+            ? 'true'
+            : 'false'
+          : 'false',
 
         // Security configurations
         MAXIMUM_LONG_LIVED_DURATION_DAYS: props.maximumLongLivedDurationDays
