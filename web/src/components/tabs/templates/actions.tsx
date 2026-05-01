@@ -8,16 +8,23 @@ import {Card} from '@/components/ui/card';
 import {useAuth} from '@/context/auth-provider';
 import {useGetTemplate} from '@/hooks/queries';
 import {Route} from '@/routes/_protected/templates/$templateId';
-import {useMutation, useQueryClient} from '@tanstack/react-query';
+import {useQueryClient} from '@tanstack/react-query';
 import {DesignerDialog} from '@/components/dialogs/designer-dialog';
-import type {
-  NotebookWithHistory,
-  NotebookUISpec,
-} from '@/designer/state/initial';
+import type {NotebookWithHistory} from '@/designer/state/initial';
 import {EditTemplateDialog} from '@/components/dialogs/edit-template';
 import {Action, getUserResourcesForAction} from '@faims3/data-model';
 import {useIsAuthorisedTo} from '@/hooks/auth-hooks';
 import {AddTemplateToTeamDialog} from '@/components/dialogs/add-template-to-team-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
+  toDesignerNotebookWithHistory,
+  useDesignerSaveMutation,
+} from '@/designer/integration';
 
 /**
  * TemplateActions component renders action cards for creating a project from a template,
@@ -33,58 +40,35 @@ const TemplateActions = () => {
   const queryClient = useQueryClient();
   const [editorOpen, setEditorOpen] = useState(false);
 
-  const saveFile = useMutation<unknown, Error, File>({
-    mutationFn: async file => {
-      const jsonText = await file.text();
-      const res = await fetch(
-        `${import.meta.env.VITE_API_URL}/api/templates/${templateId}`,
-        {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${user?.token}`,
-          },
-          body: jsonText,
-        }
-      );
-      if (!res.ok) {
-        const err = await res.text();
-        throw new Error(`Save failed: ${res.status} ${err}`);
-      }
-      return res.json();
-    },
-    onSuccess: updated => {
-      queryClient.setQueryData(['templates', templateId], () => updated);
-      queryClient.invalidateQueries({
-        queryKey: ['templates', templateId],
-      });
-    },
+  // PUT template notebook JSON from the designer; react-query updates cache on success.
+  const saveTemplateNotebook = useDesignerSaveMutation({
+    resourceType: 'templates',
+    apiResourceType: 'templates',
+    resourceId: templateId,
+    token: user?.token,
   });
 
   const initialNotebook = useMemo<NotebookWithHistory | undefined>(() => {
-    if (!data) return undefined;
-    return {
-      metadata: data.metadata,
-      'ui-specification': {
-        present: data['ui-specification'] as unknown as NotebookUISpec,
-        past: [],
-        future: [],
-      },
-    };
+    return toDesignerNotebookWithHistory(data);
   }, [data]);
 
   const handleEditorClose = (file?: File) => {
-    if (file) saveFile.mutate(file);
+    if (file) saveTemplateNotebook.mutate(file);
     setEditorOpen(false);
   };
 
-  // need to invalidate the project query after upload
+  // Invalidate template query after notebook file upload from elsewhere in the UI.
   const uploadTemplateCallback = () => {
     queryClient.invalidateQueries({queryKey: ['templates', templateId]});
   };
 
   const canEditTemplate = useIsAuthorisedTo({
     action: Action.UPDATE_TEMPLATE_UISPEC,
+    resourceId: templateId,
+  });
+
+  const canChangeTemplateArchiveStatus = useIsAuthorisedTo({
+    action: Action.CHANGE_TEMPLATE_STATUS,
     resourceId: templateId,
   });
 
@@ -109,6 +93,8 @@ const TemplateActions = () => {
     action: Action.CREATE_TEMPLATE,
   });
 
+  const archived = data?.archived === true;
+
   return (
     <>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -118,17 +104,35 @@ const TemplateActions = () => {
               <ListItem>
                 <ListLabel>Edit Template</ListLabel>
                 <ListDescription>
-                  Edit this template in the Notebook Editor.
+                  Edit this template in the {NOTEBOOK_NAME_CAPITALIZED} Editor.
                 </ListDescription>
               </ListItem>
               <ListItem>
-                <Button
-                  variant="outline"
-                  disabled={isLoading}
-                  onClick={() => setEditorOpen(true)}
-                >
-                  Open in Editor
-                </Button>
+                {archived ? (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <span className="inline-block w-fit">
+                          <Button variant="outline" disabled>
+                            Open in Editor
+                          </Button>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs text-balance">
+                        Archived templates cannot be opened in the editor.
+                        Un-archive the template first.
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                ) : (
+                  <Button
+                    variant="outline"
+                    disabled={isLoading}
+                    onClick={() => setEditorOpen(true)}
+                  >
+                    Open in Editor
+                  </Button>
+                )}
               </ListItem>
             </List>
           </Card>
@@ -144,7 +148,10 @@ const TemplateActions = () => {
                 </ListDescription>
               </ListItem>
               <ListItem>
-                <AddTemplateToTeamDialog templateId={templateId} />
+                <AddTemplateToTeamDialog
+                  templateId={templateId}
+                  disabled={archived}
+                />
               </ListItem>
             </List>
           </Card>
@@ -205,29 +212,31 @@ const TemplateActions = () => {
             </List>
           </Card>
         )}
-        <Card>
-          <List>
-            {data?.metadata.project_status === 'archived' ? (
-              <ListItem>
-                <ListLabel>Un-archive Template</ListLabel>
-                <ListDescription>
-                  Un-archive the current template.
-                </ListDescription>
-              </ListItem>
-            ) : (
-              <ListItem>
-                <ListLabel>Archive Template</ListLabel>
-                <ListDescription>Archive the current template.</ListDescription>
-              </ListItem>
-            )}
-            <ArchiveTemplateDialog
-              archived={data?.metadata.project_status === 'archived'}
-            />
-          </List>
-        </Card>
+        {canChangeTemplateArchiveStatus ? (
+          <Card>
+            <List>
+              {data?.archived === true ? (
+                <ListItem>
+                  <ListLabel>Un-archive Template</ListLabel>
+                  <ListDescription>
+                    Un-archive the current template.
+                  </ListDescription>
+                </ListItem>
+              ) : (
+                <ListItem>
+                  <ListLabel>Archive Template</ListLabel>
+                  <ListDescription>
+                    Archive the current template.
+                  </ListDescription>
+                </ListItem>
+              )}
+              <ArchiveTemplateDialog archived={data?.archived === true} />
+            </List>
+          </Card>
+        ) : null}
       </div>
       <DesignerDialog
-        open={editorOpen}
+        open={editorOpen && !archived}
         notebook={initialNotebook}
         onClose={handleEditorClose}
       />

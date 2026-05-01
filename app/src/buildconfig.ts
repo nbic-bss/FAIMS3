@@ -27,6 +27,7 @@ import {
   MapStylesheetNameType,
   MapConfig,
 } from '@faims3/forms';
+import pluralize from 'pluralize';
 
 // need to define a local logError here since logging.tsx imports this file
 const logError = (err: any) => console.error(err);
@@ -276,6 +277,25 @@ function get_notebook_name_capitalized(): string {
 }
 
 /**
+ * Retrieves the plural form of the notebook name.
+ *
+ * @returns {string} - The pluralised notebook name.
+ */
+function get_notebook_name_plural(): string {
+  return pluralize(get_notebook_name());
+}
+
+/**
+ * Retrieves the plural form of the notebook name with the first letter capitalised.
+ *
+ * @returns {string} - The capitalised pluralised notebook name.
+ */
+function get_notebook_name_plural_capitalized(): string {
+  const plural = get_notebook_name_plural();
+  return plural.charAt(0).toUpperCase() + plural.slice(1);
+}
+
+/**
  * Retrieves the configured app identifier for Android/IOS
  * @returns {string} - the app id
  */
@@ -480,6 +500,53 @@ function migrateOldDatabases(): boolean {
     !!migrateOldDatabases &&
     TRUTHY_STRINGS.includes(migrateOldDatabases.toLowerCase())
   );
+}
+
+/**
+ * When the directory lists a notebook as archived or the id is absent, the app
+ * may drop that notebook from the device after successful directory responses.
+ * - `allow`: stop sync and remote handles, then **destroy** the local Pouch DB
+ *   (IndexedDB) so no local notebook data remains — security.
+ * - `never` (default): same teardown as manual deactivate (sync off, remote and
+ *   local Pouch **closed** but not destroyed), then remove from the app list so
+ *   on-disk data can be recovered if needed.
+ * Absent ids: the app confirms deletion with several consecutive successful
+ * directory responses (automatic re-polls); archived rows need one response.
+ * Set via VITE_FORCE_REMOTE_DELETION in .env / CDK; default is never.
+ */
+export type ForceRemoteDeletionMode = 'allow' | 'never';
+
+function forceRemoteDeletion(): ForceRemoteDeletionMode {
+  const v = import.meta.env.VITE_FORCE_REMOTE_DELETION as string | undefined;
+  if (v === 'allow') {
+    return 'allow';
+  }
+  if (v !== undefined && v !== '' && v !== 'never') {
+    logError(
+      `VITE_FORCE_REMOTE_DELETION invalid (${v}); use allow or never. Assuming never.`
+    );
+  }
+  return 'never';
+}
+
+/**
+ * When true, manual notebook deactivation destroys the local Pouch/IndexedDB database.
+ * When false or unset, deactivation only closes sync and DB handles (IndexedDB may remain).
+ * Set via VITE_DELETE_ON_DEACTIVATION; default is false.
+ */
+function deleteOnDeactivation(): boolean {
+  const v = import.meta.env.VITE_DELETE_ON_DEACTIVATION;
+  if (v === '' || v === undefined) {
+    return false;
+  }
+  if (FALSEY_STRINGS.includes(v.toLowerCase())) {
+    return false;
+  } else if (TRUTHY_STRINGS.includes(v.toLowerCase())) {
+    return true;
+  } else {
+    logError('VITE_DELETE_ON_DEACTIVATION badly defined, assuming false');
+    return false;
+  }
 }
 
 // Attachment service configuration
@@ -695,6 +762,9 @@ export const BUGSNAG_KEY = get_bugsnag_key();
 export const NOTEBOOK_LIST_TYPE = get_notebook_list_type();
 export const NOTEBOOK_NAME = get_notebook_name();
 export const NOTEBOOK_NAME_CAPITALIZED = get_notebook_name_capitalized();
+export const NOTEBOOK_NAME_PLURAL = get_notebook_name_plural();
+export const NOTEBOOK_NAME_PLURAL_CAPITALIZED =
+  get_notebook_name_plural_capitalized();
 export const APP_NAME = get_app_name();
 export const HEADING_APP_NAME = get_heading_app_name();
 export const APP_ID = get_app_id();
@@ -709,6 +779,8 @@ export const SUPPORT_EMAIL = get_support_email();
 export const PRIVACY_POLICY_URL = get_app_privacy_policy_url();
 export const CONTACT_URL = get_app_contact_url();
 export const MIGRATE_OLD_DATABASES = migrateOldDatabases();
+export const FORCE_REMOTE_DELETION = forceRemoteDeletion();
+export const DELETE_ON_DEACTIVATION = deleteOnDeactivation();
 export const CAPACITOR_PLATFORM = Capacitor.getPlatform() as
   | 'ios'
   | 'android'

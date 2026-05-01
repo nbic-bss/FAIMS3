@@ -1,4 +1,6 @@
-//import { Notebook } from "./state/initial";
+/**
+ * @file Large in-repo {@link Notebook} fixture for tests and local designer development.
+ */
 
 import {Notebook} from './state/initial';
 
@@ -16,7 +18,6 @@ export const sampleNotebook: Notebook = {
     pre_description:
       'Demonstration notebook to help develop an export pipeline from Fieldmark to RSpace.',
     project_lead: 'Steve Cassidy',
-    project_status: 'New',
     sections: {
       'Primary-New-Section': {
         'sectiondescriptionPrimary-New-Section': 'This description.',
@@ -329,7 +330,6 @@ export const sampleNotebook: Notebook = {
       Primary: {
         label: 'Observation',
         views: ['Primary-Next-Section', 'Primary-New-Section'],
-        publishButtonBehaviour: 'always',
       },
     },
     visible_types: ['Primary'],
