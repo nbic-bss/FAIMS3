@@ -1,5 +1,6 @@
 import {buildRegisterUrl} from '@/constants';
 import {User} from '@/context/auth-provider';
+import {sortNotebookListNewestFirst} from '@/lib/utils';
 import type {
   GetCurrentUserResponse,
   GetListAllUsersResponse,
@@ -139,6 +140,7 @@ export const useGetProjects = ({
           : '/api/notebooks/',
         user
       ),
+    select: sortNotebookListNewestFirst,
     enabled: !!user && enabled,
   });
 
@@ -152,14 +154,17 @@ export const useGetProjects = ({
 export const useGetTemplate = ({
   user,
   templateId,
+  enabled = true,
 }: {
   user: User | null;
   templateId: string;
+  enabled?: boolean;
 }) =>
   useQuery({
     queryKey: ['templates', templateId],
     queryFn: () =>
       get<GetTemplateByIdResponse>(`/api/templates/${templateId}`, user),
+    enabled: !!user && !!templateId && enabled,
   });
 
 /**
@@ -202,6 +207,7 @@ export const useGetProjectsForTeam = ({
     queryKey: ['projectsbyteam', user?.token, teamId],
     queryFn: () =>
       get<GetNotebookListResponse>(`/api/notebooks?teamId=${teamId}`, user),
+    select: sortNotebookListNewestFirst,
   });
 
 /**
@@ -256,14 +262,17 @@ export const useGetUsersForTeam = ({
 export const useGetTeam = ({
   user,
   teamId,
+  enabled: enabledOption = true,
 }: {
   user: User | null;
   teamId: string | undefined;
+  /** When false, the team request is skipped (e.g. team label already provided by another API). */
+  enabled?: boolean;
 }) =>
   useQuery({
     queryKey: ['teams', teamId],
     queryFn: async () => get<GetTeamByIdResponse>(`/api/teams/${teamId}`, user),
-    enabled: !!user && !!teamId,
+    enabled: !!user && !!teamId && enabledOption,
   });
 
 /**
@@ -311,7 +320,7 @@ export const useGetTemplates = ({
     queryFn: async () => {
       const qs = includeArchived ? '?includeArchived=true' : '';
       const data = await get<GetListTemplatesResponse>(
-        `/api/templates/${qs}`,
+        `/api/templates${qs}`,
         user
       );
       return data.templates;
