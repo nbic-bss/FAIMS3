@@ -22,10 +22,10 @@ export const TemplatedStringFieldEditor = ({
   viewsetId,
 }: PropType) => {
   const field = useAppSelector(
-    state => state.notebook['ui-specification'].present.fields[fieldName]
+    state => state.notebook.uiSpec.present.fields[fieldName]
   );
   const allFields = useAppSelector(
-    state => state.notebook['ui-specification'].present.fields
+    state => state.notebook.uiSpec.present.fields
   );
   const dispatch = useAppDispatch();
   const textAreaRef = useRef(null) as MutableRefObject<unknown>;
@@ -36,11 +36,9 @@ export const TemplatedStringFieldEditor = ({
   const state = field['component-parameters'];
 
   const viewSet = useAppSelector(
-    state => state.notebook['ui-specification'].present.viewsets[viewsetId]
+    state => state.notebook.uiSpec.present.viewsets[viewsetId]
   );
-  const fviews = useAppSelector(
-    state => state.notebook['ui-specification'].present.fviews
-  );
+  const views = useAppSelector(state => state.notebook.uiSpec.present.views);
 
   /**
    * Collects all fields that belong to any view in the current viewset
@@ -48,13 +46,13 @@ export const TemplatedStringFieldEditor = ({
   const viewSetFields = useMemo(() => {
     const fieldSet = new Set<string>();
     viewSet.views.forEach(viewId => {
-      const view = fviews[viewId];
+      const view = views[viewId];
       if (view) {
         view.fields.forEach(fieldId => fieldSet.add(fieldId));
       }
     });
     return Array.from(fieldSet);
-  }, [viewSet.views, fviews]);
+  }, [viewSet.views, views]);
 
   // Define system variables
   const systemVariables = [
@@ -109,17 +107,17 @@ export const TemplatedStringFieldEditor = ({
   return (
     <Grid container spacing={2}>
       {alertMessage && (
-        <Grid item xs={12}>
+        <Grid size={12}>
           <Alert onClose={() => setAlertMessage('')} severity="error">
             {alertMessage}
           </Alert>
         </Grid>
       )}
 
-      <Grid item xs={12}>
+      <Grid size={12}>
         <Card variant="outlined">
           <Grid container spacing={2} sx={{p: 2}}>
-            <Grid item sm={6} xs={12}>
+            <Grid size={{xs: 12, sm: 6}}>
               <DebouncedTextField
                 name="label"
                 variant="outlined"
@@ -130,7 +128,7 @@ export const TemplatedStringFieldEditor = ({
                 helperText="Enter a label for the field"
               />
             </Grid>
-            <Grid item sm={6} xs={12}>
+            <Grid size={{xs: 12, sm: 6}}>
               <DebouncedTextField
                 name="helperText"
                 variant="outlined"
@@ -147,7 +145,7 @@ export const TemplatedStringFieldEditor = ({
         </Card>
       </Grid>
 
-      <Grid item xs={12}>
+      <Grid size={12}>
         <Card variant="outlined">
           <Box sx={{p: 2}}>
             <Typography variant="subtitle2" sx={{mb: 2}}>
@@ -155,7 +153,7 @@ export const TemplatedStringFieldEditor = ({
             </Typography>
 
             <Grid container spacing={2}>
-              <Grid item xs>
+              <Grid size="grow">
                 <DebouncedTextField
                   name="template"
                   inputRef={textAreaRef}
@@ -168,7 +166,7 @@ export const TemplatedStringFieldEditor = ({
                   helperText="Enter the template or use the visual builder"
                 />
               </Grid>
-              <Grid item>
+              <Grid size="auto">
                 <Button
                   variant="outlined"
                   startIcon={<EditIcon />}

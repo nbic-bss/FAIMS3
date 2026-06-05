@@ -11,7 +11,7 @@
  * It is used across multiple input components to standardize the UI.
  */
 import CloseIcon from '@mui/icons-material/Close';
-import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
   Box,
@@ -27,6 +27,7 @@ import {
 } from '@mui/material';
 import {alpha} from '@mui/material/styles';
 import React, {ReactNode, useState} from 'react';
+import {PhotoLightbox} from '../../../components/PhotoLightbox';
 import {RichTextContent} from '../../../components/RichText';
 
 /**
@@ -74,6 +75,15 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const open = Boolean(anchorEl);
+  // Image clicked inside the advanced helper dialog — opens PhotoLightbox.
+  const [zoomImageUrl, setZoomImageUrl] = useState<string | null>(null);
+  const onHelperImageClick = (e: React.MouseEvent<HTMLElement>) => {
+    const target = e.target as HTMLElement;
+    if (target.tagName === 'IMG') {
+      e.preventDefault();
+      setZoomImageUrl((target as HTMLImageElement).src);
+    }
+  };
 
   const hasErrors = errors.length > 0;
 
@@ -115,11 +125,13 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
       {/* Heading (Label) + Info Icon for advanced help */}
       {(!!heading || advancedHelperText) && (
         <Box
-          display="flex"
-          alignItems="center"
-          mb={0.75}
-          flexWrap="wrap"
-          gap={1}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            mb: 0.75,
+            flexWrap: 'wrap',
+            gap: 1,
+          }}
         >
           <Typography
             variant="h5"
@@ -277,12 +289,14 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
           onClose={() => setOpenDialog(false)}
           fullWidth
           maxWidth="md"
-          PaperProps={{
-            sx: {
-              borderRadius: 2,
-              p: 1,
-              boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
-              position: 'relative',
+          slotProps={{
+            paper: {
+              sx: {
+                borderRadius: 2,
+                p: 1,
+                boxShadow: '0 8px 32px rgba(0,0,0,0.25)',
+                position: 'relative',
+              },
             },
           }}
         >
@@ -304,6 +318,7 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
 
           <DialogContent
             dividers
+            onClick={onHelperImageClick}
             sx={{
               maxHeight: '60vh',
               overflowY: 'auto',
@@ -313,6 +328,7 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
                 borderRadius: 1,
                 display: 'block',
                 boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                cursor: 'zoom-in',
               },
               '& p': {
                 wordBreak: 'break-word',
@@ -347,6 +363,14 @@ const FieldWrapper: React.FC<FieldWrapperProps> = ({
             </Button>
           </DialogActions>
         </Dialog>
+      )}
+
+      {/* Click-to-zoom lightbox for images inside the helper dialog. */}
+      {zoomImageUrl && (
+        <PhotoLightbox
+          url={zoomImageUrl}
+          onClose={() => setZoomImageUrl(null)}
+        />
       )}
     </Box>
   );

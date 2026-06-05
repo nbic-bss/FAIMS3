@@ -24,7 +24,7 @@ import {fieldUpdated} from '../../store/slices/uiSpec';
 /** RichText display field: MDX body stored in `component-parameters.content`. */
 export const RichTextEditor = ({fieldName}: {fieldName: string}) => {
   const field = useAppSelector(
-    state => state.notebook['ui-specification'].present.fields[fieldName]
+    state => state.notebook.uiSpec.present.fields[fieldName]
   );
   const dispatch = useAppDispatch();
 
@@ -55,8 +55,8 @@ export const RichTextEditor = ({fieldName}: {fieldName: string}) => {
   };
 
   return (
-    <Grid container item xs={12} sm={8} sx={{m: 'auto'}}>
-      <Grid item xs={12}>
+    <Grid container size={{xs: 12, sm: 8}} sx={{m: 'auto'}}>
+      <Grid size={12}>
         <MdxEditor
           initialMarkdown={initContent}
           editorRef={ref}

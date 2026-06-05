@@ -19,7 +19,7 @@ import {SimpleFieldWrapper} from './SimpleFieldWrapper';
  */
 export const TakePointFieldEditor = ({fieldName}: {fieldName: string}) => {
   const field = useAppSelector(
-    state => state.notebook['ui-specification'].present.fields[fieldName]
+    state => state.notebook.uiSpec.present.fields[fieldName]
   );
   const dispatch = useAppDispatch();
 
@@ -39,7 +39,7 @@ export const TakePointFieldEditor = ({fieldName}: {fieldName: string}) => {
   return (
     <BaseFieldEditor fieldName={fieldName}>
       <Grid container>
-        <Grid item sm={6} xs={12}>
+        <Grid size={{xs: 12, sm: 6}}>
           <SimpleFieldWrapper
             heading="Button Label Text"
             helperText="Custom text for the button. If empty, the field label will be used."

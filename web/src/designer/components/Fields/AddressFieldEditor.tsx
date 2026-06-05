@@ -35,7 +35,7 @@ type AddressFieldConfig = {
 /** Address plugin toggles: online suggestions vs full manual structured entry. */
 export const AddressFieldEditor = ({fieldName}: {fieldName: string}) => {
   const field = useAppSelector(
-    state => state.notebook['ui-specification'].present.fields[fieldName]
+    state => state.notebook.uiSpec.present.fields[fieldName]
   );
   const dispatch = useAppDispatch();
 
@@ -60,10 +60,10 @@ export const AddressFieldEditor = ({fieldName}: {fieldName: string}) => {
 
   return (
     <BaseFieldEditor fieldName={fieldName}>
-      <Grid item xs={12}>
+      <Grid size={12}>
         <Card variant="outlined" sx={{display: 'flex'}}>
-          <Grid container p={2} rowGap={1}>
-            <Grid item xs={12}>
+          <Grid container sx={{p: 2, rowGap: 1}}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Checkbox
@@ -86,7 +86,7 @@ export const AddressFieldEditor = ({fieldName}: {fieldName: string}) => {
               />
             </Grid>
 
-            <Grid item xs={12}>
+            <Grid size={12}>
               <FormControlLabel
                 control={
                   <Checkbox

@@ -1,15 +1,5 @@
-import styled from '@emotion/styled';
 import {Action, getVisibleTypes, ProjectStatus} from '@faims3/data-model';
-import {
-  Alert,
-  AlertTitle,
-  AppBar,
-  Box,
-  Paper,
-  Tab,
-  Tabs,
-  TabScrollButton,
-} from '@mui/material';
+import {Alert, AlertTitle, AppBar, Box, Paper, Tab, Tabs} from '@mui/material';
 import {useTheme} from '@mui/material/styles';
 import useMediaQuery from '@mui/material/useMediaQuery';
 import {useQueryClient} from '@tanstack/react-query';
@@ -109,16 +99,6 @@ function a11yProps(index: number, id: string) {
   };
 }
 
-const MyTabScrollButton = styled(TabScrollButton)({
-  '&.Mui-disabled': {
-    width: 0,
-  },
-  overflow: 'hidden',
-  transition: 'width 0.3s',
-  width: 25,
-  marginLeft: 0,
-});
-
 /**
  * NotebookComponentProps defines the properties for the NotebookComponent component.
  */
@@ -196,10 +176,7 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
   const viewsets = uiSpecification.viewsets;
 
   const templateId = useAppSelector(
-    state =>
-      selectProjectById(state, project.projectId)?.metadata?.['template_id'] as
-        | string
-        | undefined
+    state => selectProjectById(state, project.projectId)?.templateId
   );
 
   /**
@@ -265,20 +242,22 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
             />
           </Box>
         )}
+        {/* Note that the Tab bar below is set to auto scroll, so on sm screens
+        there is a gap on the left due to the hidden left scroll button, this appears
+        if you scroll right.  There doesn't seem to be a way to push the content all
+        the way to the left when the scroll button is hidden.
+        
+        Previous margin adjustments have been removed */}
         <Box
-          mb={2}
           sx={{
-            marginLeft: {sm: '-16px', md: 0},
-            marginRight: {sm: '-16px', md: 0},
+            mb: 2,
           }}
           component={Paper}
           elevation={0}
           variant={isMedium ? 'outlined' : 'elevation'}
         >
-          <AppBar
-            position="static"
+          <Paper
             sx={{
-              paddingLeft: '16px',
               backgroundColor: theme.palette.background.tabsBackground,
             }}
           >
@@ -287,14 +266,12 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
               onChange={handleTabChange}
               aria-label={`${NOTEBOOK_NAME} tabs`}
               indicatorColor="secondary"
-              TabIndicatorProps={{
-                style: {
-                  backgroundColor: theme.palette.secondary.contrastText,
-                },
-              }}
               sx={{
                 backgroundColor: theme.palette.background.tabsBackground,
                 justifyItems: 'space-between',
+                '& .MuiTabs-indicator': {
+                  backgroundColor: theme.palette.secondary.contrastText,
+                },
 
                 // Make more compact if needed
 
@@ -309,10 +286,9 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
                     }
                   : {},
               }}
-              ScrollButtonComponent={MyTabScrollButton}
               textColor="inherit"
               variant="scrollable"
-              scrollButtons={true}
+              scrollButtons="auto"
               allowScrollButtonsMobile={true}
             >
               <Tab
@@ -336,7 +312,7 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
                 {...a11yProps(4, NOTEBOOK_NAME)}
               />
             </Tabs>
-          </AppBar>
+          </Paper>
         </Box>
 
         {
@@ -374,14 +350,12 @@ export default function NotebookComponent({project}: NotebookComponentProps) {
         </TabPanel>
 
         <TabPanel value={tabIndex} index={2} id={'map'}>
-          {uiSpecification !== null && (
-            <OverviewMap
-              serverId={project.serverId}
-              records={records}
-              project_id={project.projectId}
-              uiSpec={uiSpecification}
-            />
-          )}
+          <OverviewMap
+            serverId={project.serverId}
+            records={records}
+            project_id={project.projectId}
+            uiSpec={uiSpecification}
+          />
         </TabPanel>
 
         <TabPanel value={tabIndex} index={3} id={'details'}>
