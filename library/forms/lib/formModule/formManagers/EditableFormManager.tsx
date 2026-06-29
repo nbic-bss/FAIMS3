@@ -37,6 +37,7 @@ import {
   getRecordContextFromRecord,
   onChangeTemplatedFields,
 } from './templatedFields';
+import {onChangeComputedFields} from './computedFields';
 import {
   FieldVisibilityMap,
   FormNavigationContext,
@@ -233,6 +234,12 @@ export const EditableFormManager: React.FC<
     try {
       const revisionToUpdate = await ensureWorkingRevision();
 
+      onChangeComputedFields({
+        form: form as FaimsForm,
+        formId: props.formId,
+        uiSpec: dataEngine.uiSpec,
+        runListeners: false,
+      });
       onChangeTemplatedFields({
         form: form as FaimsForm,
         formId: props.formId,
@@ -349,7 +356,7 @@ export const EditableFormManager: React.FC<
       if (validationMode === 'ONLY_TOUCHED') {
         const touchedFields: string[] = [];
         for (const [k, meta] of Object.entries(form.state.fieldMeta)) {
-          if (meta.isTouched) {
+          if (meta && meta.isTouched) {
             touchedFields.push(k);
           }
         }
