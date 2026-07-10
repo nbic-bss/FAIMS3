@@ -61,9 +61,9 @@ platform :ios do
       skip_confirmation: true
     }
 
-    # Nuke types are development|distribution|enterprise (not appstore).
     # Revoke on Apple + remove from the Match git repo.
-    match_nuke(match_common.merge(type: "distribution"))
+    # match_nuke type values match match(): appstore, development, etc.
+    match_nuke(match_common.merge(type: "appstore"))
     match_nuke(match_common.merge(type: "development")) if include_development
 
     # Create fresh certs/profiles and push encrypted to MATCH_GIT_URL
