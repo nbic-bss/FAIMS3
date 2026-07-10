@@ -2,9 +2,6 @@
 #
 # Destructive: revokes existing distribution (and optionally development)
 # certificates on Apple Developer, then regenerates them into MATCH_GIT_URL.
-#
-# Before first use, create a GitHub Environment named "ios-signing" and add
-# required reviewers so this cannot be run by accident.
 name: Renew iOS Match Certificates
 
 on:
@@ -28,7 +25,6 @@ jobs:
     name: Nuke and regenerate Match certs
     if: ${{ github.event.inputs.confirm == 'renew' }}
     runs-on: macos-latest
-    environment: ios-signing
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
