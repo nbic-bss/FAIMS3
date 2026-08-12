@@ -2,11 +2,7 @@ import {HRID_STRING} from '../datamodel';
 import {FAIMSTypeName} from '../types';
 import {slugify} from '../utils';
 import {compileExpression, getDependantFields} from './conditionals';
-import {
-  compileComputedExpression,
-  ExprType,
-  FAIMS_TYPE_TO_EXPR_TYPE,
-} from './expressions';
+import {compileComputedExpression} from './expressions';
 import {
   CompiledUiSpecModel,
   CompiledUiSpecSections,
@@ -571,46 +567,23 @@ export function compileUiSpecConditionals(
   // may read the passed-in spec directly rather than the (typed) return value.
   const depFields: string[] = [];
 
-  const expressionFieldTypes = new Map<string, ExprType>();
-  for (const field in uiSpecification.fields) {
-    const t =
-      FAIMS_TYPE_TO_EXPR_TYPE[uiSpecification.fields[field]['type-returned']];
-    if (t) expressionFieldTypes.set(field, t);
-  }
-
-  // Required return type per computed field component.
-  const COMPUTED_RETURN_TYPES: {[componentName: string]: ExprType} = {
-    ComputedNumber: 'number',
-    ComputedText: 'string',
-  };
-
   for (const field in uiSpecification.fields) {
     const fieldDef = uiSpecification.fields[field];
     fieldDef.conditionFn = compileExpression(fieldDef.condition);
     depFields.push(...getDependantFields(fieldDef.condition));
 
-    // Compile computed field expressions at notebook load, attaching the
+    // Compile ComputedField expressions at notebook load, attaching the
     // evaluator and its references in place (mirrors conditionFn above).
-    // The expression is type checked against the other fields' types and
-    // must produce the component's declared return type.
-    const requiredType = COMPUTED_RETURN_TYPES[fieldDef['component-name']];
-    if (requiredType) {
+    if (fieldDef['component-name'] === 'ComputedField') {
       const expr = fieldDef['component-parameters']?.expression;
       if (typeof expr === 'string' && expr.trim() !== '') {
         try {
-          const compiled = compileComputedExpression(
-            expr,
-            expressionFieldTypes,
-            requiredType
-          );
+          const compiled = compileComputedExpression(expr);
           fieldDef.expressionFn = compiled.evaluate;
           fieldDef.expressionRefs = compiled.references;
         } catch (e) {
           // Invalid expression: leave unset so recompute yields a blank value.
-          console.warn(
-            `Computed field "${field}" has an invalid expression`,
-            e
-          );
+          console.warn(`ComputedField "${field}" has an invalid expression`, e);
         }
       }
     }

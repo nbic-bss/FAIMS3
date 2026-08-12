@@ -52,5 +52,4 @@ export const richTextFieldSpec: FieldInfo<Props> = {
   //validator: () => true,
   // TODO improve this
   view: {component: DefaultRenderer, config: {}},
-  excludeFromParentDisplay: true,
 };

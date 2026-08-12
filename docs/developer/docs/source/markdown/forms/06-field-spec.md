@@ -19,6 +19,7 @@ const fieldDefinitionShape = {
   initialValue: z.any().optional(),
   // Not currently implemented in new forms module
   persistent: z.boolean().optional(),
+  displayParent: z.boolean().optional(),
   meta: FieldMetaSchema.optional(),
   // Conditional visibility logic (raw, serializable expression)
   condition: ConditionalExpressionSchema.nullable().optional(),
@@ -202,6 +203,7 @@ Enables uncertainty flag for field value:
         }
     },
     "persistent": false,
+    "displayParent": false
 },
 ```
 
@@ -250,6 +252,7 @@ Enables uncertainty flag for field value:
         }
     },
     "persistent": false,
+    "displayParent": false
 },
 ```
 

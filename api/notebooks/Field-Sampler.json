@@ -55,7 +55,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Multi-Select": {
           "component-namespace": "faims-custom",
@@ -100,7 +101,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Select": {
           "component-namespace": "faims-custom",
@@ -140,7 +142,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Date-and-Time": {
           "component-namespace": "faims-custom",
@@ -163,7 +166,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "File-Upload": {
           "component-namespace": "faims-custom",
@@ -187,7 +191,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Map-Position": {
           "component-namespace": "mapping-plugin",
@@ -215,7 +220,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Radio": {
           "component-namespace": "faims-custom",
@@ -252,7 +258,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Check": {
           "component-namespace": "faims-custom",
@@ -290,7 +297,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Photo": {
           "component-namespace": "faims-custom",
@@ -313,7 +321,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "GPS-Location": {
           "component-namespace": "faims-custom",
@@ -338,7 +347,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "QR": {
           "component-namespace": "qrcode",
@@ -361,7 +371,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Address": {
           "component-namespace": "faims-custom",
@@ -383,7 +394,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         }
       },
       "views": {
@@ -422,7 +434,7 @@
       "settings": {
         "showQrCodeButton": false
       },
-      "schemaVersion": "7.0"
+      "schemaVersion": "5.0"
     },
     "metadata": {
       "information": {

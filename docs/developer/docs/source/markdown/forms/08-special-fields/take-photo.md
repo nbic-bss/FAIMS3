@@ -248,6 +248,7 @@ const takePhotoDataSchemaFunction = (props: TakePhotoProps) => {
   },
   "initialValue": null,
   "persistent": true,
+  "displayParent": true,
   "meta": {
     "annotation": {
       "include": true,

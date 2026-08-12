@@ -30,7 +30,6 @@ import {
   SelectableConditionOption,
 } from '@/designer/types/condition';
 import {ChoiceElementProps, TemplatedStringProps} from '@faims3/forms';
-import {extractExpressionReferences} from '@faims3/data-model';
 
 /**
  * Helpers for the condition editor.
@@ -1015,11 +1014,7 @@ type ViewMap = Record<
 type ViewSetMap = Record<string, {label: string; views: string[]}>;
 
 export type FieldDependencyReference = {
-  type:
-    | 'section-condition'
-    | 'field-condition'
-    | 'templated-string'
-    | 'computed-expression';
+  type: 'section-condition' | 'field-condition' | 'templated-string';
   formId?: string;
   formLabel?: string;
   sectionId?: string;
@@ -1150,35 +1145,6 @@ export const findFieldDependencyReferences = (
           fieldId: fId,
           fieldLabel: label,
           templateUsage: `{{${fieldName}}}`,
-        });
-      }
-    }
-  }
-
-  // Check for computed fields referencing the deleted field in an expression
-  for (const [fId, fieldDef] of Object.entries(scopedFields)) {
-    if (
-      fieldDef['component-name'] === 'ComputedNumber' ||
-      fieldDef['component-name'] === 'ComputedText'
-    ) {
-      const expression =
-        (fieldDef['component-parameters']?.expression as string | undefined) ||
-        '';
-      if (extractExpressionReferences(expression).includes(fieldName)) {
-        const label = fieldDef['component-parameters']?.label ?? fId;
-        const section = fieldToSection.get(fId);
-        const form = section?.sectionId
-          ? sectionToForm.get(section.sectionId)
-          : undefined;
-        affected.push({
-          type: 'computed-expression',
-          formId: form?.formId,
-          formLabel: form?.formLabel,
-          sectionId: section?.sectionId,
-          sectionLabel: section?.sectionLabel,
-          fieldId: fId,
-          fieldLabel: label,
-          templateUsage: `{${fieldName}}`,
         });
       }
     }

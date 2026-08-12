@@ -251,6 +251,7 @@ const valueSchemaFunction = (props: RelatedRecordFieldProps) => {
         }
     },
     "persistent": false,
+    "displayParent": false
 }
 ```
 

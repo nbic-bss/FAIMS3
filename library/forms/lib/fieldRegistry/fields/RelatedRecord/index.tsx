@@ -1030,5 +1030,4 @@ export const relatedRecordFieldSpec: FieldInfo = {
     config: {},
     attributes: {singleColumn: true},
   },
-  excludeFromParentDisplay: true,
 };

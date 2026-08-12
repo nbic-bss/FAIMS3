@@ -24,6 +24,7 @@ function makeAddressTemplateSpec(): UiSpecModel {
         meta,
         condition: null,
         persistent: false,
+        displayParent: false,
       },
       derived: {
         'component-namespace': 'faims-custom',
@@ -40,6 +41,7 @@ function makeAddressTemplateSpec(): UiSpecModel {
         meta,
         condition: null,
         persistent: false,
+        displayParent: false,
       },
     },
     views: {

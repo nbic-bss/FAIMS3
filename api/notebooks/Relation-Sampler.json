@@ -25,7 +25,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "hridForm-Section": {
           "component-namespace": "faims-custom",
@@ -78,7 +79,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "hridWidget-Main": {
           "component-namespace": "faims-custom",
@@ -138,7 +140,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         },
         "Factories": {
           "component-namespace": "faims-custom",
@@ -170,7 +173,8 @@
               "label": "uncertainty"
             }
           },
-          "persistent": false
+          "persistent": false,
+          "displayParent": false
         }
       },
       "views": {
@@ -199,7 +203,7 @@
       "settings": {
         "showQrCodeButton": false
       },
-      "schemaVersion": "7.0"
+      "schemaVersion": "5.0"
     },
     "metadata": {
       "information": {
