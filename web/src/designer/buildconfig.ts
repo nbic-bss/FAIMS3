@@ -15,6 +15,7 @@
  *
  * Filename: buildconfig.ts
  * Description:
+ *   hotfix/pre-migration cache-bust: keep notebook uiSpecification at schema 5.0
  *   This module exports the configuration for the designer, specifically
  *   managing template protections. Configuration is parsed from Vite's
  *   `import.meta.env` with a single zod schema (coerce + rename) and exposed

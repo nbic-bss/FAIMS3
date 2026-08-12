@@ -5,6 +5,8 @@ import {z} from 'zod';
 import {capitalize} from './lib/utils';
 
 /*
+ * hotfix/pre-migration cache-bust: keep notebook uiSpecification at schema 5.0
+ *
  * Configuration is parsed from Vite's `import.meta.env` with a single zod
  * schema:
  *   - Each env key is declared once with its coercion / defaulting logic and
