@@ -23,6 +23,7 @@
     "migrate": "env-cmd tsx src/scripts/migrate.ts",
     "migrate-with-keys": "env-cmd tsx src/scripts/migrate.ts --keys",
     "dump-user-emails": "env-cmd tsx src/scripts/dumpUserEmails.ts",
+    "rollback-notebooks-to-v5": "env-cmd tsx src/scripts/rollbackNotebooksToV5.ts",
     "delete-metadata-databases": "env-cmd tsx src/scripts/deleteMetadataDatabases.ts",
     "restore-backup": "env-cmd node --expose-gc --max-old-space-size=8000 --import tsx src/scripts/restoreBackup.ts",
     "migrate-test-backups": "tsx src/scripts/migrateBackupJsonl.ts test/backup-short.jsonl test/backup.jsonl",
