@@ -1,4 +1,8 @@
 import {z} from 'zod';
+import {PlanTemplateSchema} from '../plans/types';
+// Barrel import (not '../plans/planTypeMap') so the per-plan PlanTypeMap
+// augmentations are in scope here, making the stored `plan` a narrowable union.
+import {RegisteredPlanSchema} from '../plans';
 import {ExprValue} from './expressions';
 
 // ============================================================================
@@ -170,6 +174,33 @@ export const CompiledUiSpecFieldsSchema = z.record(
 );
 export type CompiledUiSpecFields = z.infer<typeof CompiledUiSpecFieldsSchema>;
 
+/** Relation kind for RelatedRecordSelector `component-parameters.relation_type`. */
+export const relatedTypeSchema = z.enum([
+  'faims-core::Child',
+  'faims-core::Linked',
+]);
+export type RelatedType = z.infer<typeof relatedTypeSchema>;
+
+/** Component type whose field values hold forward links to related records. */
+export const RELATED_RECORD_SELECTOR = {
+  namespace: 'faims-custom',
+  name: 'RelatedRecordSelector',
+} as const;
+
+/**
+ * RelatedRecordSelector-specific `component-parameters` (excludes shared base field
+ * props such as `label` and `name`, which are merged in by the forms package).
+ */
+export const relatedRecordSelectorComponentParamsSchema = z
+  .object({
+    related_type: z.string(),
+    relation_type: relatedTypeSchema,
+    multiple: z.boolean().optional().default(false),
+    allowLinkToExisting: z.boolean().optional().default(false),
+    hideCreateAnotherButton: z.boolean().optional().default(false),
+  })
+  .passthrough();
+
 /** A form: a named form type composed of one or more sections. */
 export const UiSpecFormSchema = z
   .object({
@@ -240,15 +271,12 @@ export const UiSpecModelSchema = z
 export type UiSpecModel = z.infer<typeof UiSpecModelSchema>;
 
 /**
- * A {@link UiSpecModel} with views compiled (conditions turned into functions)
- * and a record of which fields feed into conditional expressions.
+ * A {@link UiSpecModel} with views compiled (conditions turned into functions).
  */
 export const CompiledUiSpecModelSchema = UiSpecModelSchema.extend({
   fields: CompiledUiSpecFieldsSchema,
   // TODO Rename to sections
   views: CompiledUiSpecSectionsSchema,
-  /** Field names that are referenced as conditional sources. */
-  conditional_sources: z.set(z.string()),
 });
 export type CompiledUiSpecModel = z.infer<typeof CompiledUiSpecModelSchema>;
 
@@ -310,8 +338,8 @@ export type NotebookUiSpec = z.infer<typeof NotebookUiSpecSchema>;
 
 /**
  * Compiled counterpart of {@link NotebookUiSpec}: same shape but with sections
- * compiled (conditions turned into `conditionFn`s) and `conditional_sources`
- * populated, as per {@link CompiledUiSpecModelSchema}.
+ * compiled (conditions turned into `conditionFn`s), as per
+ * {@link CompiledUiSpecModelSchema}.
  */
 export const CompiledNotebookUiSpecSchema = CompiledUiSpecModelSchema.and(
   z.object({
@@ -325,9 +353,31 @@ export type CompiledNotebookUiSpec = z.infer<
   typeof CompiledNotebookUiSpecSchema
 >;
 
+/*
+ * A template is a notebook definition that will be used to instantiate many notebooks.
+ * It has the same uiSpec and metadata as a notebook but includes an optional plan template
+ * that will be used to instantiate a plan when a notebook is created from the template.
+ */
+export const TemplateDefinitionSchema = z.object({
+  uiSpec: NotebookUiSpecSchema,
+  metadata: NotebookMetadataSchema,
+  planTemplate: PlanTemplateSchema.optional(),
+});
+export type TemplateDefinition = z.infer<typeof TemplateDefinitionSchema>;
+
+/*
+ * Notebook definition is what is stored in the DB and downloaded/uploaded as JSON.
+ *
+ * Todo: the plan is attached to both templates and notebooks since they currently share the
+ * same type but our intention is that templates will have a plan 'schema' while the notebook
+ * has the actual plan. This means we probably want to split the NotebookDefinition type in two
+ * at some point. Until we work out how to do this we can use the plan slot in the template for
+ * the schema.
+ */
 export const NotebookDefinitionSchema = z.object({
   uiSpec: NotebookUiSpecSchema,
   metadata: NotebookMetadataSchema,
+  plan: RegisteredPlanSchema.optional(),
 });
 export type NotebookDefinition = z.infer<typeof NotebookDefinitionSchema>;
 
@@ -338,6 +388,7 @@ export type NotebookDefinition = z.infer<typeof NotebookDefinitionSchema>;
 export const CompiledNotebookDefinitionSchema = z.object({
   uiSpec: CompiledNotebookUiSpecSchema,
   metadata: NotebookMetadataSchema,
+  plan: RegisteredPlanSchema.optional(),
 });
 export type CompiledNotebookDefinition = z.infer<
   typeof CompiledNotebookDefinitionSchema

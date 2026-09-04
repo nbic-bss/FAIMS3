@@ -32,7 +32,13 @@ import {
   GetNotebookUsersResponse,
   getRecordListAudit,
   getRecordsWithRegex,
+  hasUpdatedTimeFilter,
   isPeopleUserAccountDisabled,
+  queryRecordIdsByUpdated,
+  UpdatedTimeFilter,
+  updatedAfterMsSchema,
+  updatedBeforeMsSchema,
+  updatedTimeQueryRefine,
   PostAddNotebookUserInputSchema,
   PostCreateNotebookInput,
   PostCreateNotebookInputSchema,
@@ -52,7 +58,6 @@ import {
   PutUpdateNotebookUiSpecificationInputSchema,
   removeProjectRole,
   Role,
-  slugify,
   userCanReadTemplateDocument,
   userHasProjectRole,
 } from '@faims3/data-model';
@@ -81,6 +86,10 @@ import {
 } from '../couchdb/export/geospatialExport';
 import {stripDeletedRelatedRefsFromRecordData} from '../couchdb/export/stripDeletedRelatedRefs';
 import {FullExportConfigSchema} from '../couchdb/export/types';
+import {
+  contentDispositionAttachment,
+  sanitizeDownloadFilename,
+} from '../couchdb/export/utils';
 import {deleteAllInvitesForProject} from '../couchdb/invites';
 import {
   applyNotebookLifecycleStatus,
@@ -98,8 +107,8 @@ import {
   updateProjectOfflineMapRegion,
   updateProjectUiSpecification,
 } from '../couchdb/notebooks';
+import {createNotebookFromTemplate, getTemplate} from '../couchdb/templates';
 import {createTombstoneDocument} from '../couchdb/tombstones';
-import {getTemplate} from '../couchdb/templates';
 import {
   filterPeopleUsersForList,
   getCouchUserFromEmailOrUserId,
@@ -118,6 +127,7 @@ import {
 import {mockTokenContentsForUser} from '../utils';
 import patch from '../utils/patchExpressAsync';
 import {recordsRouter} from './records';
+import {parseUpdatedTimeFilterFromQuery} from './updatedTimeQuery';
 
 // This must occur before express api is used
 patch();
@@ -172,8 +182,21 @@ const DownloadTokenPayloadSchema = z.object({
   userID: z.string(),
   // Full export config (only present when format === 'full')
   fullConfig: FullExportConfigSchema.optional(),
+  // Exclusive epoch-ms window copied onto the download JWT
+  updatedAfter: z.number().optional(),
+  updatedBefore: z.number().optional(),
 });
 type DownloadTokenPayload = z.infer<typeof DownloadTokenPayloadSchema>;
+
+/** Optional exclusive `updatedAfter` / `updatedBefore` query (epoch-ms strings). */
+const UpdatedTimeQuerySchema = z
+  .object({
+    updatedAfter: updatedAfterMsSchema,
+    updatedBefore: updatedBeforeMsSchema,
+  })
+  .refine(updatedTimeQueryRefine, {
+    message: 'updatedAfter must be less than updatedBefore',
+  });
 
 // Formats requiring a view ID
 const REQUIRES_VIEW_ID: DownloadFormat[] = ['csv'];
@@ -245,6 +268,12 @@ const validateDownloadToken = async ({
  * - includeKML (default: true)
  * - includeGeoPackage (default: true)
  * - includeMetadata (default: true)
+ *
+ * Optional exclusive time window (epoch-ms strings), stored on the download JWT:
+ * - updatedAfter — record.updatedAt > this
+ * - updatedBefore — record.updatedAt < this
+ * Both may be omitted. When both are set, updatedAfter must be less than
+ * updatedBefore.
  */
 api.get(
   '/:id/records/export',
@@ -256,17 +285,23 @@ api.get(
     },
   }),
   validate({
-    query: z.object({
-      viewID: z.string().optional(),
-      format: DownloadFormatSchema,
-      // Full export options
-      includeTabular: z.string().optional().default('true'),
-      includeAttachments: z.string().optional().default('true'),
-      includeGeoJSON: z.string().optional().default('true'),
-      includeKML: z.string().optional().default('true'),
-      includeGeoPackage: z.string().optional().default('true'),
-      includeMetadata: z.string().optional().default('true'),
-    }),
+    query: z
+      .object({
+        viewID: z.string().optional(),
+        format: DownloadFormatSchema,
+        // Full export options
+        includeTabular: z.string().optional().default('true'),
+        includeAttachments: z.string().optional().default('true'),
+        includeGeoJSON: z.string().optional().default('true'),
+        includeKML: z.string().optional().default('true'),
+        includeGeoPackage: z.string().optional().default('true'),
+        includeMetadata: z.string().optional().default('true'),
+        updatedAfter: updatedAfterMsSchema,
+        updatedBefore: updatedBeforeMsSchema,
+      })
+      .refine(updatedTimeQueryRefine, {
+        message: 'updatedAfter must be less than updatedBefore',
+      }),
     params: z.object({
       id: z.string(),
     }),
@@ -276,10 +311,13 @@ api.get(
       throw new Exceptions.UnauthorizedException('Not authenticated.');
     }
 
+    const updatedFilter = parseUpdatedTimeFilterFromQuery(req.query);
+
     const payload: DownloadTokenPayload = {
       projectID: req.params.id,
       format: req.query.format,
       userID: req.user.user_id,
+      ...updatedFilter,
     };
 
     // Handle full export
@@ -324,6 +362,15 @@ api.get(
       (await projectHasSpatialFields(req.params.id))
     ) {
       await assertGdalAvailable();
+    }
+
+    if (hasUpdatedTimeFilter(updatedFilter)) {
+      const dataDb = await getDataDb(req.params.id);
+      await queryRecordIdsByUpdated({
+        dataDb,
+        ...updatedFilter,
+        limit: 1,
+      });
     }
 
     // Build the download token
@@ -481,11 +528,10 @@ api.post(
       return 'template_id' in payload;
     };
 
-    let uiSpecification;
+    let projectID: string | undefined;
     const projectName: string = req.body.name;
     const description =
       'description' in req.body ? req.body.description : undefined;
-    let templateId: string | undefined = undefined;
 
     if (isFromTemplate(req.body)) {
       const template = await getTemplate(req.body.template_id);
@@ -504,30 +550,28 @@ api.post(
         );
       }
 
-      if (template.archived === true) {
-        throw new Exceptions.InvalidRequestException(
-          'Cannot create a notebook from an archived template.'
-        );
-      }
-
-      uiSpecification = template.uiSpecification;
-      templateId = template._id;
+      projectID = await createNotebookFromTemplate({
+        template,
+        projectName,
+        description,
+        teamId: req.body.teamId,
+        createdBy: req.user.user_id,
+        planConfig: req.body.planConfig,
+      });
     } else if (isFromScratch(req.body)) {
-      uiSpecification = req.body.uiSpecification;
+      projectID = await createNotebook({
+        projectName,
+        uiSpecification: req.body.uiSpecification,
+        description,
+        teamId: req.body.teamId,
+        createdBy: req.user.user_id,
+      });
     } else {
       throw new Exceptions.ValidationException(
         'Could not parse input payload as either a from scratch or from template creation. Contact a system administrator and validate payload integrity.'
       );
     }
 
-    const projectID = await createNotebook({
-      projectName,
-      uiSpecification,
-      description,
-      templateId,
-      teamId: req.body.teamId,
-      createdBy: req.user.user_id,
-    });
     if (projectID) {
       // Make the user an admin of this notebook
       addProjectRole({
@@ -749,7 +793,8 @@ api.post(
   }
 );
 
-// export current versions of all records in this notebook
+// Legacy unpaginated dump of current record versions (export-shaped).
+// Accepts the same exclusive updatedAfter / updatedBefore query as /metadata.
 api.get(
   '/:id/records/',
   requireAuthenticationAPI,
@@ -761,6 +806,7 @@ api.get(
   }),
   validate({
     params: z.object({id: z.string()}),
+    query: UpdatedTimeQuerySchema,
   }),
   // TODO complete type annotations for this method
   async (req, res: Response<{records: any}>) => {
@@ -769,6 +815,7 @@ api.get(
     }
     const tokenContents = mockTokenContentsForUser(req.user);
     const {id: projectId} = req.params;
+    const updatedFilter = parseUpdatedTimeFilterFromQuery(req.query);
     const uiSpecification = await getCompiledUiSpecModel(req.params.id);
     compileUiSpecConditionals(uiSpecification);
     const dataDb = await getDataDb(projectId);
@@ -779,6 +826,7 @@ api.get(
       regex: '.*',
       tokenContents,
       uiSpecification,
+      ...updatedFilter,
     });
     if (records) {
       const filenames: string[] = [];
@@ -880,7 +928,8 @@ api.get(
  * Download route - validates JWT and streams the appropriate export format.
  *
  * This route handles the actual file streaming for all export formats.
- * The JWT contains all necessary information about what to export.
+ * The JWT contains all necessary information about what to export,
+ * including optional updatedAfter / updatedBefore exclusive-ms bounds.
  */
 api.get(
   '/download/:downloadToken',
@@ -913,64 +962,88 @@ api.get(
           `Form with id ${payload.viewID} not found in notebook`
         );
       }
-      exportLabel = uiSpec.viewsets[payload.viewID].label ?? payload.viewID;
+      // Form labels are user-controlled; never interpolate them raw into headers.
+      exportLabel = sanitizeDownloadFilename(
+        uiSpec.viewsets[payload.viewID].label ?? payload.viewID,
+        sanitizeDownloadFilename(payload.viewID, 'export')
+      );
     } else {
-      exportLabel = slugify(payload.projectID);
+      exportLabel = sanitizeDownloadFilename(payload.projectID);
     }
+
+    const exportFilter: UpdatedTimeFilter = {
+      ...(payload.updatedAfter !== undefined
+        ? {updatedAfter: payload.updatedAfter}
+        : {}),
+      ...(payload.updatedBefore !== undefined
+        ? {updatedBefore: payload.updatedBefore}
+        : {}),
+    };
 
     if (payload.format === 'csv') {
       res.setHeader('Content-Type', 'text/csv');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${exportLabel}-export.csv"`
+        contentDispositionAttachment(`${exportLabel}-export.csv`)
       );
-      streamNotebookRecordsAsCSV(payload.projectID, payload.viewID!, res);
+      streamNotebookRecordsAsCSV(
+        payload.projectID,
+        payload.viewID!,
+        res,
+        exportFilter
+      );
     } else if (payload.format === 'zip') {
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${exportLabel}-photos.zip"`
+        contentDispositionAttachment(`${exportLabel}-photos.zip`)
       );
       res.setHeader('Content-Type', 'application/zip');
       streamNotebookFilesAsZip({
         projectId: payload.projectID,
         targetViewID: payload.viewID,
         res,
+        exportFilter,
       });
     } else if (payload.format === 'geojson') {
       res.setHeader('Content-Type', 'application/geo+json');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${slugify(payload.projectID)}-export.geojson"`
+        contentDispositionAttachment(`${exportLabel}-export.geojson`)
       );
-      streamNotebookRecordsAsGeoJSON(payload.projectID, res);
+      streamNotebookRecordsAsGeoJSON(payload.projectID, res, exportFilter);
     } else if (payload.format === 'kml') {
       res.setHeader('Content-Type', 'application/vnd.google-earth.kml+xml');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${slugify(payload.projectID)}-export.kml"`
+        contentDispositionAttachment(`${exportLabel}-export.kml`)
       );
-      streamNotebookRecordsAsKML(payload.projectID, res);
+      streamNotebookRecordsAsKML(payload.projectID, res, exportFilter);
     } else if (payload.format === 'geopackage') {
       // Layers grouped by form + geometry type; built via temp GeoJSON + ogr2ogr.
       await assertGdalAvailable();
       res.setHeader('Content-Type', 'application/geopackage+sqlite3');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${slugify(payload.projectID)}-export.gpkg"`
+        contentDispositionAttachment(`${exportLabel}-export.gpkg`)
       );
-      await streamNotebookRecordsAsGeoPackage(payload.projectID, res);
+      await streamNotebookRecordsAsGeoPackage(
+        payload.projectID,
+        res,
+        exportFilter
+      );
     } else if (payload.format === 'full') {
       const fullFilename = generateFullExportFilename(payload.projectID);
       res.setHeader('Content-Type', 'application/zip');
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename="${fullFilename}"`
+        contentDispositionAttachment(fullFilename)
       );
       await streamFullExport({
         projectId: payload.projectID,
         userId: payload.userID,
         config: payload.fullConfig,
         res,
+        exportFilter,
       });
     } else {
       throw new Exceptions.InvalidRequestException(
