@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 import {
   assessNotebookSchemaCompatibility,
   CURRENT_NOTEBOOK_UI_SCHEMA_VERSION,
@@ -276,5 +277,6 @@ export function projectInformationFromGetNotebook(
     schemaCompatibility,
     recordCount: notebook.recordCount,
     offlineMapRegion: notebook.offlineMapRegion,
+    disableQuickShare: notebook.disableQuickShare,
   };
 }
